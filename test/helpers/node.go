@@ -53,6 +53,10 @@ func CreateSSHMeta(host string, port int, user string) *SSHMeta {
 	}
 }
 
+func (s *SSHMeta) Logger() *logrus.Entry {
+	return s.logger
+}
+
 func (s *SSHMeta) String() string {
 	return fmt.Sprintf("environment: %s, SSHClient: %s", s.env, s.sshClient.String())
 
