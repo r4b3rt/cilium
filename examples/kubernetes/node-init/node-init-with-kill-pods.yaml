@@ -21,6 +21,18 @@ spec:
           securityContext:
             privileged: true
           env:
+          # MODE defines the managed Kubernetes environment the node-init
+          # script is running in.
+          #
+          # Supported values:
+          # - unspec
+          # - gke
+          # - eks
+          - name: MODE
+            value: unspec
+
+          # STARTUP_SCRIPT is the script run on node bootstrap. Node
+          # bootstrapping can be customized in this script.
           - name: STARTUP_SCRIPT
             value: |
               #!/bin/bash
@@ -30,9 +42,11 @@ spec:
               set -o nounset
 
               if [[ ! -f /tmp/cilium-installed-v1 ]]; then
-                echo "Installing BPF filesystem mount"
+                exit
+              fi
 
-                cat >/tmp/sys-fs-bpf.mount <<EOF
+              echo "Installing BPF filesystem mount"
+              cat >/tmp/sys-fs-bpf.mount <<EOF
               [Unit]
               Description=Mount BPF filesystem (Cilium)
               Documentation=http://docs.cilium.io/
@@ -49,26 +63,19 @@ spec:
               WantedBy=multi-user.target
               EOF
 
-                if [ -d "/etc/systemd/system/" ]; then
-                  mv /tmp/sys-fs-bpf.mount /etc/systemd/system/
-                  echo "Installed sys-fs-bpf.mount to /etc/systemd/system/"
-                elif [ -d "/lib/systemd/system/" ]; then
-                  mv /tmp/sys-fs-bpf.mount /lib/systemd/system/
-                  echo "Installed sys-fs-bpf.mount to /lib/systemd/system/"
-                fi
+              if [ -d "/etc/systemd/system/" ]; then
+                mv /tmp/sys-fs-bpf.mount /etc/systemd/system/
+                echo "Installed sys-fs-bpf.mount to /etc/systemd/system/"
+              elif [ -d "/lib/systemd/system/" ]; then
+                mv /tmp/sys-fs-bpf.mount /lib/systemd/system/
+                echo "Installed sys-fs-bpf.mount to /lib/systemd/system/"
+              fi
 
-                systemctl enable sys-fs-bpf.mount
-                systemctl start sys-fs-bpf.mount
+              systemctl enable sys-fs-bpf.mount
+              systemctl start sys-fs-bpf.mount
 
-                echo "Installing /etc/cni/net.d/04-cilium-cni.conf"
-                mkdir -p /etc/cni/net.d/
-                cat >/etc/cni/net.d/04-cilium-cni.conf <<EOF
-              {
-                "name": "cilium",
-                "type": "cilium-cni"
-              }
-              EOF
-
+              # GKE: Alter the kubelet configuration to run in CNI mode
+              if [ "$MODE" -eq "gke" ]; then
                 echo "Changing kubelet configuration to --network-plugin=cni --cni-bin-dir=/home/kubernetes/bin"
                 mkdir -p /home/kubernetes/bin
                 sed -i "s:--network-plugin=kubenet:--network-plugin=cni\ --cni-bin-dir=/home/kubernetes/bin:g" /etc/default/kubelet
@@ -103,14 +110,17 @@ spec:
                   echo "Not implemented for cos-beta, please restart cilium pods"
                   echo "manually!"
                 fi
-
-                echo "Link information:"
-                ip link
-
-                echo "Routing table:"
-                ip route
-
-                echo "Node initialization complete"
-
-                touch /tmp/cilium-installed-v1
               fi
+
+              echo "Link information:"
+              ip link
+
+              echo "Routing table:"
+              ip route
+
+              echo "Addressing:"
+              ip -4 a
+              ip -6 a
+
+              echo "Node initialization complete"
+              touch /tmp/cilium-installed-v1
