@@ -20,6 +20,21 @@ installation method to get started, refer to the section
 Should you encounter any issues during the installation, please refer to the
 :ref:`troubleshooting_k8s` section and / or seek help on :ref:`slack`.
 
+When do I need to use a kvstore?
+================================
+
+Unlike the section :ref:`k8s_install_default`, this guide explains how to
+configure Cilium to use an external kvstore such as etcd. If you are unsure
+whether you need to use a kvstore at all, the following is a list of reasons
+when to use a kvstore:
+
+ * If you want to use the :ref:`Cluster Mesh` functionality.
+ * If you are running in an environment with more than 250 nodes, 5k pods, or
+   if you observe a high overhead in state propagation caused by Kubernetes
+   events.
+ * If you do not want Cilium to store state in Kubernetes custom resources
+   (CRDs).
+
 .. _ds_deploy:
 
 .. include:: requirements_intro.rst

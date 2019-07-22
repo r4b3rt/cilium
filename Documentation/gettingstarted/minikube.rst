@@ -52,37 +52,37 @@ Kubernetes CNI plugin.
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.15/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.15/cilium.yaml
 
   .. group-tab:: K8s 1.14
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.14/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.14/cilium.yaml
 
   .. group-tab:: K8s 1.13
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.13/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.13/cilium.yaml
 
   .. group-tab:: K8s 1.12
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.12/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.12/cilium.yaml
 
   .. group-tab:: K8s 1.11
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.11/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.11/cilium.yaml
 
   .. group-tab:: K8s 1.10
 
     .. parsed-literal::
 
-      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.10/cilium-minikube.yaml
+      kubectl create -f \ |SCM_WEB|\/examples/kubernetes/1.10/cilium.yaml
 
 
 Next steps

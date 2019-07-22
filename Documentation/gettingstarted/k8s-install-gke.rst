@@ -57,21 +57,23 @@ Create a cluster-admin-binding
 
     kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user your@google.email
 
-Prepare the Cluster Nodes
-=========================
+Deploy the node-init DaemonSet
+==============================
 
-By deploying the ``cilium-node-init`` DaemonSet, GKE worker nodes are
-automatically prepared to run Cilium as they are added to the cluster. The
-DaemonSet will:
+The node-init DaemonSet is used to prepare worker nodes for Cilium as you scale
+the number of worker nodes. In case of GKE, this means:
 
-* Mount the BPF filesystem
-* Enable kubelet to operate in CNI mode
-* Install the Cilium CNI configuration file
+ * Installing a service file to mount the BPF filesystem
+ * Enable kubelet to operate in CNI mode
 
-.. parsed-literal::
+In order to deploy the node-init DaemonSet, download the template, adjust it to
+run on GKE and deploy it:
 
-     kubectl create namespace cilium
-     kubectl -n cilium apply -f \ |SCM_WEB|\/examples/kubernetes/node-init/node-init.yaml
+   .. parsed-literal::
+
+       wget \ |SCM_WEB|\/examples/kubernetes/node-init/node-init.yaml
+       sed -i.bak 's/value: unspec/value: gke/' node-init.yaml
+       kubectl -n kube-system apply -f node-init.yaml
 
 Restart kube-dns
 ================
@@ -83,52 +85,7 @@ plugin. Restart kube-dns to ensure it is managed by Cilium.
 
      kubectl -n kube-system delete pod -l k8s-app=kube-dns
 
-
-Deploy Cilium + cilium-etcd-operator
-====================================
-
-The following all-in-one YAML will deploy all required components to bring up
-Cilium including an etcd cluster managed by the cilium-etcd-operator.
-
-.. tabs::
-
-  .. group-tab:: K8s 1.15
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.15/cilium-with-node-init.yaml
-
-  .. group-tab:: K8s 1.14
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.14/cilium-with-node-init.yaml
-
-  .. group-tab:: K8s 1.13
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.13/cilium-with-node-init.yaml
-
-  .. group-tab:: K8s 1.12
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.12/cilium-with-node-init.yaml
-
-  .. group-tab:: K8s 1.11
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.11/cilium-with-node-init.yaml
-
-  .. group-tab:: K8s 1.10
-
-    .. parsed-literal::
-
-      kubectl apply -f \ |SCM_WEB|\/examples/kubernetes/1.10/cilium-with-node-init.yaml
-
-
+.. include:: k8s-install-default-steps.rst
 
 Restart remaining pods
 ======================
