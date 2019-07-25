@@ -33,6 +33,7 @@ import (
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/maps/lxcmap"
+	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/workloads"
 
@@ -583,6 +584,14 @@ func (d *Daemon) deleteEndpointQuiet(ep *endpoint.Endpoint, conf endpoint.Delete
 	// Remove the endpoint before we clean up. This ensures it is no longer
 	// listed or queued for rebuilds.
 	endpointmanager.Remove(ep)
+
+	defer func() {
+		repr, err := monitorAPI.EndpointDeleteRepr(ep)
+		// Ignore endpoint creation if EndpointCreateRepr != nil
+		if err == nil {
+			d.SendNotification(monitorAPI.AgentNotifyEndpointDeleted, repr)
+		}
+	}()
 
 	// If dry mode is enabled, no changes to BPF maps are performed
 	if !option.Config.DryMode {

@@ -18,4 +18,6 @@ package notifications
 type RegenNotificationInfo interface {
 	GetID() uint64
 	GetOpLabels() []string
+	GetK8sPodName() string
+	GetK8sNamespace() string
 }
