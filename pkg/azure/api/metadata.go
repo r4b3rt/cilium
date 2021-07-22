@@ -17,7 +17,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -37,6 +37,12 @@ func GetSubscriptionID(ctx context.Context) (string, error) {
 // This is retrieved via the Azure Instance Metadata Service
 func GetResourceGroupName(ctx context.Context) (string, error) {
 	return getMetadataString(ctx, "instance/compute/resourceGroupName")
+}
+
+// GetAzureCloudName retrieves the current Azure cloud name in which the host running the Cilium Operator is located
+// This is retrieved via the Azure Instance Metadata Service
+func GetAzureCloudName(ctx context.Context) (string, error) {
+	return getMetadataString(ctx, "instance/compute/azEnvironment")
 }
 
 // getMetadataString returns the text representation of a field from the Azure IMS (instance metadata service)
@@ -68,7 +74,7 @@ func getMetadataString(ctx context.Context, path string) (string, error) {
 		}
 	}()
 
-	respBytes, err := ioutil.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

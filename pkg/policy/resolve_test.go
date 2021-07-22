@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Authors of Cilium
+// Copyright 2018-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -201,10 +201,11 @@ func bootstrapRepo(ruleGenFunc func(int) api.Rules, numRules int, c *C) *Reposit
 	mgr := cache.NewCachingIdentityAllocator(&allocator.IdentityAllocatorOwnerMock{})
 	testRepo := NewPolicyRepository(mgr.GetIdentityCache(), nil)
 
-	var wg sync.WaitGroup
 	SetPolicyEnabled(option.DefaultEnforcement)
 	GenerateNumIdentities(3000)
-	testSelectorCache.UpdateIdentities(identityCache, nil)
+	wg := &sync.WaitGroup{}
+	testSelectorCache.UpdateIdentities(identityCache, nil, wg)
+	wg.Wait()
 	testRepo.selectorCache = testSelectorCache
 	rulez, _ := testRepo.AddList(ruleGenFunc(numRules))
 
@@ -216,7 +217,8 @@ func bootstrapRepo(ruleGenFunc func(int) api.Rules, numRules int, c *C) *Reposit
 	})
 
 	epsToRegen := NewEndpointSet(nil)
-	rulez.UpdateRulesEndpointsCaches(epSet, epsToRegen, &wg)
+	wg = &sync.WaitGroup{}
+	rulez.UpdateRulesEndpointsCaches(epSet, epsToRegen, wg)
 	wg.Wait()
 
 	c.Assert(epSet.Len(), Equals, 0)
@@ -518,7 +520,9 @@ func (ds *PolicyTestSuite) TestMapStateWithIngressWildcard(c *C) {
 	added1 := cache.IdentityCache{
 		identity.NumericIdentity(192): labels.ParseSelectLabelArray("id=resolve_test_1"),
 	}
-	testSelectorCache.UpdateIdentities(added1, nil)
+	wg := &sync.WaitGroup{}
+	testSelectorCache.UpdateIdentities(added1, nil, wg)
+	wg.Wait()
 	c.Assert(policy.policyMapChanges.changes, HasLen, 0)
 
 	// Have to remove circular reference before testing to avoid an infinite loop
@@ -595,15 +599,19 @@ func (ds *PolicyTestSuite) TestMapStateWithIngress(c *C) {
 		identity.NumericIdentity(193): labels.ParseSelectLabelArray("id=resolve_test_1", "num=2"),
 		identity.NumericIdentity(194): labels.ParseSelectLabelArray("id=resolve_test_1", "num=3"),
 	}
-	testSelectorCache.UpdateIdentities(added1, nil)
+	wg := &sync.WaitGroup{}
+	testSelectorCache.UpdateIdentities(added1, nil, wg)
 	// Cleanup the identities from the testSelectorCache
-	defer testSelectorCache.UpdateIdentities(nil, added1)
+	defer testSelectorCache.UpdateIdentities(nil, added1, wg)
+	wg.Wait()
 	c.Assert(policy.policyMapChanges.changes, HasLen, 3)
 
 	deleted1 := cache.IdentityCache{
 		identity.NumericIdentity(193): labels.ParseSelectLabelArray("id=resolve_test_1", "num=2"),
 	}
-	testSelectorCache.UpdateIdentities(nil, deleted1)
+	wg = &sync.WaitGroup{}
+	testSelectorCache.UpdateIdentities(nil, deleted1, wg)
+	wg.Wait()
 	c.Assert(policy.policyMapChanges.changes, HasLen, 4)
 
 	cachedSelectorWorld := testSelectorCache.FindCachedIdentitySelector(api.ReservedEndpointSelectors[labels.IDNameWorld])
@@ -612,7 +620,7 @@ func (ds *PolicyTestSuite) TestMapStateWithIngress(c *C) {
 	cachedSelectorTest := testSelectorCache.FindCachedIdentitySelector(api.NewESFromLabels(lblTest))
 	c.Assert(cachedSelectorTest, Not(IsNil))
 
-	rule1MapStateEntry := NewMapStateEntry(cachedSelectorTest, labels.LabelArrayList{ruleLabel, ruleLabel}, false, false)
+	rule1MapStateEntry := NewMapStateEntry(cachedSelectorTest, labels.LabelArrayList{ruleLabel}, false, false)
 	allowEgressMapStateEntry := NewMapStateEntry(nil, labels.LabelArrayList{ruleLabelAllowAnyEgress}, false, false)
 
 	expectedEndpointPolicy := EndpointPolicy{
@@ -632,7 +640,7 @@ func (ds *PolicyTestSuite) TestMapStateWithIngress(c *C) {
 							cachedSelectorWorld: nil,
 							cachedSelectorTest:  nil,
 						},
-						DerivedFromRules: labels.LabelArrayList{ruleLabel, ruleLabel},
+						DerivedFromRules: labels.LabelArrayList{ruleLabel},
 					},
 				},
 				Egress: L4PolicyMap{},

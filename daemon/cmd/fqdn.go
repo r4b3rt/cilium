@@ -18,8 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -97,13 +97,14 @@ func identitiesForFQDNSelectorIPs(selectorsWithIPsToUpdate map[policyApi.FQDNSel
 	return selectorIdentitySliceMapping, newlyAllocatedIdentities, nil
 }
 
-func (d *Daemon) updateSelectorCacheFQDNs(ctx context.Context, selectors map[policyApi.FQDNSelector][]*identity.Identity, selectorsWithoutIPs []policyApi.FQDNSelector) (wg *sync.WaitGroup) {
+func (d *Daemon) updateSelectorCacheFQDNs(ctx context.Context, selectors map[policyApi.FQDNSelector][]*identity.Identity, selectorsWithoutIPs []policyApi.FQDNSelector) *sync.WaitGroup {
 	// There may be nothing to update - in this case, we exit and do not need
 	// to trigger policy updates for all endpoints.
 	if len(selectors) == 0 && len(selectorsWithoutIPs) == 0 {
 		return &sync.WaitGroup{}
 	}
 
+	notifyWg := &sync.WaitGroup{}
 	// Update mapping of selector to set of IPs in selector cache.
 	for selector, identitySlice := range selectors {
 		log.WithFields(logrus.Fields{
@@ -114,7 +115,7 @@ func (d *Daemon) updateSelectorCacheFQDNs(ctx context.Context, selectors map[pol
 			// Nil check here? Hopefully not necessary...
 			numIds = append(numIds, numId.ID)
 		}
-		d.policy.GetSelectorCache().UpdateFQDNSelector(selector, numIds)
+		d.policy.GetSelectorCache().UpdateFQDNSelector(selector, numIds, notifyWg)
 	}
 
 	if len(selectorsWithoutIPs) > 0 {
@@ -125,10 +126,10 @@ func (d *Daemon) updateSelectorCacheFQDNs(ctx context.Context, selectors map[pol
 		log.WithFields(logrus.Fields{
 			"fqdnSelectors": selectorsWithoutIPs,
 		}).Debug("removing all identities from FQDN selectors")
-		d.policy.GetSelectorCache().RemoveIdentitiesFQDNSelectors(selectorsWithoutIPs)
+		d.policy.GetSelectorCache().RemoveIdentitiesFQDNSelectors(selectorsWithoutIPs, notifyWg)
 	}
 
-	return d.endpointManager.UpdatePolicyMaps(ctx)
+	return d.endpointManager.UpdatePolicyMaps(ctx, notifyWg)
 }
 
 // bootstrapFQDN initializes the toFQDNs related subsystems: dnsNameManager and the DNS proxy.
@@ -230,9 +231,15 @@ func (d *Daemon) bootstrapFQDN(possibleEndpoints map[uint16]*endpoint.Endpoint, 
 			cfg.Cache.ReplaceFromCacheByNames(namesToClean, caches...)
 
 			metrics.FQDNGarbageCollectorCleanedTotal.Add(float64(len(namesToClean)))
-			log.WithField(logfields.Controller, dnsGCJobName).Infof(
-				"FQDN garbage collector work deleted %d name entries", len(namesToClean))
 			_, err := d.dnsNameManager.ForceGenerateDNS(context.TODO(), namesToClean)
+			namesCount := len(namesToClean)
+			// Limit the amount of info level logging to some sane amount
+			if namesCount > 20 {
+				// namedsToClean is only used for logging after this so we can reslice it in place
+				namesToClean = namesToClean[:20]
+			}
+			log.WithField(logfields.Controller, dnsGCJobName).Infof(
+				"FQDN garbage collector work deleted %d name entries: %s", namesCount, strings.Join(namesToClean, ","))
 			return err
 		},
 		Context: d.ctx,
@@ -797,7 +804,7 @@ func deleteDNSLookups(globalCache *fqdn.DNSCache, endpoints []*endpoint.Endpoint
 // readPreCache returns a fqdn.DNSCache object created from the json data at
 // preCachePath
 func readPreCache(preCachePath string) (cache *fqdn.DNSCache, err error) {
-	data, err := ioutil.ReadFile(preCachePath)
+	data, err := os.ReadFile(preCachePath)
 	if err != nil {
 		return nil, err
 	}

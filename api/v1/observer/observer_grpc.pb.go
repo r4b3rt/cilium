@@ -11,7 +11,8 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+// Requires gRPC-Go v1.32.0 or later.
+const _ = grpc.SupportPackageIsVersion7
 
 // ObserverClient is the client API for Observer service.
 //
@@ -19,6 +20,10 @@ const _ = grpc.SupportPackageIsVersion6
 type ObserverClient interface {
 	// GetFlows returning structured data, meant to eventually obsolete GetLastNFlows.
 	GetFlows(ctx context.Context, in *GetFlowsRequest, opts ...grpc.CallOption) (Observer_GetFlowsClient, error)
+	// GetAgentEvents returns Cilium agent events.
+	GetAgentEvents(ctx context.Context, in *GetAgentEventsRequest, opts ...grpc.CallOption) (Observer_GetAgentEventsClient, error)
+	// GetDebugEvents returns Cilium datapath debug events.
+	GetDebugEvents(ctx context.Context, in *GetDebugEventsRequest, opts ...grpc.CallOption) (Observer_GetDebugEventsClient, error)
 	// GetNodes returns information about nodes in a cluster.
 	GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error)
 	// ServerStatus returns some details about the running hubble server.
@@ -34,7 +39,7 @@ func NewObserverClient(cc grpc.ClientConnInterface) ObserverClient {
 }
 
 func (c *observerClient) GetFlows(ctx context.Context, in *GetFlowsRequest, opts ...grpc.CallOption) (Observer_GetFlowsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Observer_serviceDesc.Streams[0], "/observer.Observer/GetFlows", opts...)
+	stream, err := c.cc.NewStream(ctx, &Observer_ServiceDesc.Streams[0], "/observer.Observer/GetFlows", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +70,70 @@ func (x *observerGetFlowsClient) Recv() (*GetFlowsResponse, error) {
 	return m, nil
 }
 
+func (c *observerClient) GetAgentEvents(ctx context.Context, in *GetAgentEventsRequest, opts ...grpc.CallOption) (Observer_GetAgentEventsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Observer_ServiceDesc.Streams[1], "/observer.Observer/GetAgentEvents", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &observerGetAgentEventsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Observer_GetAgentEventsClient interface {
+	Recv() (*GetAgentEventsResponse, error)
+	grpc.ClientStream
+}
+
+type observerGetAgentEventsClient struct {
+	grpc.ClientStream
+}
+
+func (x *observerGetAgentEventsClient) Recv() (*GetAgentEventsResponse, error) {
+	m := new(GetAgentEventsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *observerClient) GetDebugEvents(ctx context.Context, in *GetDebugEventsRequest, opts ...grpc.CallOption) (Observer_GetDebugEventsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Observer_ServiceDesc.Streams[2], "/observer.Observer/GetDebugEvents", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &observerGetDebugEventsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Observer_GetDebugEventsClient interface {
+	Recv() (*GetDebugEventsResponse, error)
+	grpc.ClientStream
+}
+
+type observerGetDebugEventsClient struct {
+	grpc.ClientStream
+}
+
+func (x *observerGetDebugEventsClient) Recv() (*GetDebugEventsResponse, error) {
+	m := new(GetDebugEventsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *observerClient) GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error) {
 	out := new(GetNodesResponse)
 	err := c.cc.Invoke(ctx, "/observer.Observer/GetNodes", in, out, opts...)
@@ -89,6 +158,10 @@ func (c *observerClient) ServerStatus(ctx context.Context, in *ServerStatusReque
 type ObserverServer interface {
 	// GetFlows returning structured data, meant to eventually obsolete GetLastNFlows.
 	GetFlows(*GetFlowsRequest, Observer_GetFlowsServer) error
+	// GetAgentEvents returns Cilium agent events.
+	GetAgentEvents(*GetAgentEventsRequest, Observer_GetAgentEventsServer) error
+	// GetDebugEvents returns Cilium datapath debug events.
+	GetDebugEvents(*GetDebugEventsRequest, Observer_GetDebugEventsServer) error
 	// GetNodes returns information about nodes in a cluster.
 	GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error)
 	// ServerStatus returns some details about the running hubble server.
@@ -99,18 +172,31 @@ type ObserverServer interface {
 type UnimplementedObserverServer struct {
 }
 
-func (*UnimplementedObserverServer) GetFlows(*GetFlowsRequest, Observer_GetFlowsServer) error {
+func (UnimplementedObserverServer) GetFlows(*GetFlowsRequest, Observer_GetFlowsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetFlows not implemented")
 }
-func (*UnimplementedObserverServer) GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error) {
+func (UnimplementedObserverServer) GetAgentEvents(*GetAgentEventsRequest, Observer_GetAgentEventsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetAgentEvents not implemented")
+}
+func (UnimplementedObserverServer) GetDebugEvents(*GetDebugEventsRequest, Observer_GetDebugEventsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetDebugEvents not implemented")
+}
+func (UnimplementedObserverServer) GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNodes not implemented")
 }
-func (*UnimplementedObserverServer) ServerStatus(context.Context, *ServerStatusRequest) (*ServerStatusResponse, error) {
+func (UnimplementedObserverServer) ServerStatus(context.Context, *ServerStatusRequest) (*ServerStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ServerStatus not implemented")
 }
 
-func RegisterObserverServer(s *grpc.Server, srv ObserverServer) {
-	s.RegisterService(&_Observer_serviceDesc, srv)
+// UnsafeObserverServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ObserverServer will
+// result in compilation errors.
+type UnsafeObserverServer interface {
+	mustEmbedUnimplementedObserverServer()
+}
+
+func RegisterObserverServer(s grpc.ServiceRegistrar, srv ObserverServer) {
+	s.RegisterService(&Observer_ServiceDesc, srv)
 }
 
 func _Observer_GetFlows_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -131,6 +217,48 @@ type observerGetFlowsServer struct {
 }
 
 func (x *observerGetFlowsServer) Send(m *GetFlowsResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Observer_GetAgentEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetAgentEventsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ObserverServer).GetAgentEvents(m, &observerGetAgentEventsServer{stream})
+}
+
+type Observer_GetAgentEventsServer interface {
+	Send(*GetAgentEventsResponse) error
+	grpc.ServerStream
+}
+
+type observerGetAgentEventsServer struct {
+	grpc.ServerStream
+}
+
+func (x *observerGetAgentEventsServer) Send(m *GetAgentEventsResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Observer_GetDebugEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetDebugEventsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ObserverServer).GetDebugEvents(m, &observerGetDebugEventsServer{stream})
+}
+
+type Observer_GetDebugEventsServer interface {
+	Send(*GetDebugEventsResponse) error
+	grpc.ServerStream
+}
+
+type observerGetDebugEventsServer struct {
+	grpc.ServerStream
+}
+
+func (x *observerGetDebugEventsServer) Send(m *GetDebugEventsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -170,7 +298,10 @@ func _Observer_ServerStatus_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Observer_serviceDesc = grpc.ServiceDesc{
+// Observer_ServiceDesc is the grpc.ServiceDesc for Observer service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Observer_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "observer.Observer",
 	HandlerType: (*ObserverServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -187,6 +318,16 @@ var _Observer_serviceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "GetFlows",
 			Handler:       _Observer_GetFlows_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetAgentEvents",
+			Handler:       _Observer_GetAgentEvents_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetDebugEvents",
+			Handler:       _Observer_GetDebugEvents_Handler,
 			ServerStreams: true,
 		},
 	},
